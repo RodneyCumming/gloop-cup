@@ -1,0 +1,1141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Blob football, volleyball and cricket you can play with friends online or on one keyboard.">
+<title>Gloop Cup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Rubik:wght@400;500;700&display=swap">
+<style>
+/* Layout: the floodlit pitch is the hero; the menu or room panel sits under it like a stadium scoreboard. */
+:root {
+  color-scheme: dark;
+  --night: #0c1130;
+  --night-2: #131a45;
+  --panel: #171f52;
+  --line: #2b3675;
+  --chalk: #f3f1ff;
+  --muted: #a6acd8;
+  --flood: #ffe8a3;
+  --tang: #ff8a2b; --tang-2: #ffb456; --tang-3: #d95d16;
+  --lag: #22c5b3; --lag-2: #78e6d7; --lag-3: #11938a;
+  --grass: #1f7a3c; --grass-2: #23884a;
+  --strip: #c9b27a; --wood: #e9d3a0;
+  --display: "Bungee", "Arial Black", Impact, sans-serif;
+  --body: "Rubik", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --r: 14px;
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { background: var(--night); color: var(--chalk); margin: 0; }
+body { font-family: var(--body); font-size: 15px; line-height: 1.45; }
+.app {
+  max-width: 1080px; margin: 0 auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 18px 40px;
+  display: grid; gap: 16px;
+}
+header { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 6px 16px; }
+h1 { font-family: var(--display); font-weight: 400; font-size: clamp(28px, 6vw, 46px); line-height: 1; margin: 0; letter-spacing: .01em; }
+h1 .g1 { color: var(--tang); } h1 .g2 { color: var(--lag); }
+header p { margin: 0; color: var(--muted); }
+.stage { position: relative; border-radius: var(--r); overflow: hidden; border: 1px solid var(--line); background: var(--night-2); box-shadow: 0 20px 60px -30px #000; }
+canvas { display: block; width: 100%; aspect-ratio: 1000 / 550; max-width: 100%; touch-action: none; }
+.pad { display: none; gap: 10px; }
+@media (hover: none) and (pointer: coarse) { .pad.on { display: grid; grid-template-columns: 1fr 1fr 1.4fr; } }
+.pad button { font-family: var(--display); font-size: 22px; padding: 18px 0; border-radius: var(--r); background: var(--panel); border: 1px solid var(--line); color: var(--chalk); user-select: none; -webkit-user-select: none; touch-action: none; }
+.pad button.down { background: var(--line); }
+.pad .jump { color: var(--flood); }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 18px; display: grid; gap: 16px; }
+h2 { font-family: var(--display); font-weight: 400; font-size: 20px; margin: 0; letter-spacing: .02em; }
+h3 { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 0; font-weight: 500; }
+p { margin: 0; }
+.hint { color: var(--muted); font-size: 14px; max-width: 70ch; }
+.cols { display: grid; gap: 16px; grid-template-columns: 1fr; }
+@media (min-width: 760px) { .cols { grid-template-columns: 1.3fr 1fr; } }
+.card { background: var(--night-2); border-radius: 12px; padding: 16px; display: grid; gap: 12px; align-content: start; min-width: 0; }
+.row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+label { font-size: 12px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+input, select { font: inherit; color: var(--chalk); background: var(--night); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+input:focus-visible, select:focus-visible, button:focus-visible { outline: 2px solid var(--flood); outline-offset: 2px; }
+#nm { width: 100%; max-width: 280px; }
+#code { width: 110px; text-transform: uppercase; letter-spacing: .2em; font-family: var(--display); }
+button { font: inherit; cursor: pointer; }
+.btn { font-weight: 700; border: 0; border-radius: 999px; padding: 11px 20px; background: var(--flood); color: var(--night); }
+.btn:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; color: var(--chalk); border: 1px solid var(--line); }
+.btn.ghost:hover { background: var(--line); }
+.btn:disabled { opacity: .45; cursor: default; filter: none; }
+.games { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.games li { display: flex; align-items: center; justify-content: space-between; gap: 10px; background: var(--panel); border-radius: 10px; padding: 10px 12px; }
+.games li.empty { background: none; padding: 0; color: var(--muted); font-size: 14px; }
+.games .who { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.games .code { font-family: var(--display); letter-spacing: .12em; color: var(--flood); }
+.keys { display: grid; gap: 6px; font-size: 14px; color: var(--muted); }
+kbd { font-family: var(--body); font-size: 12px; font-weight: 700; color: var(--chalk); background: var(--panel); border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 6px; padding: 1px 6px; }
+.sports { display: flex; gap: 8px; flex-wrap: wrap; }
+.sports button { font-family: var(--display); font-size: 14px; letter-spacing: .03em; padding: 9px 14px; border-radius: 999px; border: 1px solid var(--line); background: var(--night); color: var(--muted); }
+.sports button[aria-pressed="true"] { background: var(--flood); color: var(--night); border-color: var(--flood); }
+.sports button:disabled { cursor: default; }
+
+.roomhead { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px; }
+.codebig { font-family: var(--display); font-size: 34px; letter-spacing: .14em; color: var(--flood); line-height: 1; }
+.teams { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+.team { background: var(--night-2); border-radius: 12px; padding: 14px; display: grid; gap: 10px; align-content: start; border-top: 4px solid var(--tc); min-width: 0; }
+.team.t0 { --tc: var(--tang); } .team.t1 { --tc: var(--lag); }
+.team h2 { color: var(--tc); font-size: 17px; }
+.team ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; min-height: 28px; }
+.team li { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.team li.me::after { content: " (you)"; color: var(--muted); }
+.team li.empty { color: var(--muted); font-size: 14px; }
+.team .btn { background: var(--tc); justify-self: start; padding: 8px 14px; font-size: 14px; }
+.watchers { color: var(--muted); font-size: 14px; }
+.status { color: var(--flood); font-size: 14px; min-height: 1.4em; }
+.err { color: #ff9b9b; }
+.rules { border-top: 1px solid var(--line); padding-top: 14px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <h1><span class="g1">Gloop</span> <span class="g2">Cup</span></h1>
+    <p>Blob football, volleyball and cricket. Online or on one keyboard.</p>
+  </header>
+
+  <div class="stage"><canvas id="pitch" width="1000" height="550" aria-label="Playing field"></canvas></div>
+  <div class="pad" id="pad">
+    <button data-b="1" aria-label="Move left">◀</button>
+    <button data-b="2" aria-label="Move right">▶</button>
+    <button data-b="4" class="jump">Jump</button>
+  </div>
+
+  <section class="panel" id="menu">
+    <div class="row">
+      <div style="display:grid;gap:6px;flex:1 1 220px">
+        <label for="nm">Your name</label>
+        <input id="nm" maxlength="14" autocomplete="off">
+      </div>
+    </div>
+    <div class="cols">
+      <div class="card">
+        <h2>Online</h2>
+        <p class="hint" id="onlineHint">Loading…</p>
+        <div class="row">
+          <button class="btn" id="hostBtn" disabled>Host a game</button>
+          <form id="joinForm" class="row" style="gap:8px">
+            <input id="code" placeholder="CODE" maxlength="4" autocomplete="off" aria-label="Game code">
+            <button class="btn ghost" id="joinBtn" disabled>Join</button>
+          </form>
+        </div>
+        <p class="status err" id="menuStatus"></p>
+      </div>
+      <div class="card">
+        <h2>On this keyboard</h2>
+        <div class="row">
+          <button class="btn ghost" id="cpuBtn">Play the computer</button>
+          <button class="btn ghost" id="duoBtn">Two players</button>
+        </div>
+        <div class="keys">
+          <span><kbd>A</kbd> <kbd>D</kbd> move, <kbd>W</kbd> jump: left player</span>
+          <span><kbd>←</kbd> <kbd>→</kbd> move, <kbd>↑</kbd> jump: right player</span>
+          <span>Online, either set works. Pick football, volleyball or cricket once you're in.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel" id="room" hidden>
+    <div class="roomhead">
+      <div style="display:grid;gap:4px">
+        <h3>Game code</h3>
+        <div class="row"><span class="codebig" id="roomCode">----</span><button class="btn ghost" id="copyBtn">Copy invite link</button></div>
+      </div>
+      <button class="btn ghost" id="leaveBtn">Leave game</button>
+    </div>
+    <div class="teams">
+      <div class="team t0"><h2>Tangerine</h2><ul id="team0"></ul><button class="btn" data-team="0">Play for Tangerine</button></div>
+      <div class="team t1"><h2>Lagoon</h2><ul id="team1"></ul><button class="btn" data-team="1">Play for Lagoon</button></div>
+    </div>
+    <p class="watchers" id="watchers"></p>
+    <div class="row" id="hostCtl">
+      <div class="sports" id="sports" role="group" aria-label="Sport">
+        <button data-sport="football" aria-pressed="true">Football</button>
+        <button data-sport="volley" aria-pressed="false">Volleyball</button>
+        <button data-sport="cricket" aria-pressed="false">Cricket</button>
+      </div>
+      <select id="len" aria-label="Match length"></select>
+      <button class="btn" id="kickBtn">Kick off</button>
+    </div>
+    <p class="status" id="roomStatus"></p>
+    <p class="hint rules" id="roomRules"></p>
+  </section>
+
+  <section class="panel" id="local" hidden>
+    <div class="roomhead">
+      <h2 id="localTitle">You vs the computer</h2>
+      <button class="btn ghost" id="backBtn">Back to menu</button>
+    </div>
+    <div class="row">
+      <div class="sports" id="lsports" role="group" aria-label="Sport">
+        <button data-sport="football" aria-pressed="true">Football</button>
+        <button data-sport="volley" aria-pressed="false">Volleyball</button>
+        <button data-sport="cricket" aria-pressed="false">Cricket</button>
+      </div>
+      <select id="llen" aria-label="Match length"></select>
+      <button class="btn" id="lkickBtn">Kick off</button>
+    </div>
+    <p class="hint" id="localKeys"></p>
+    <p class="hint rules" id="localRules"></p>
+  </section>
+</div>
+
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+(() => {
+const $ = s => document.querySelector(s);
+const css = getComputedStyle(document.documentElement);
+const tok = n => css.getPropertyValue(n).trim();
+
+// ---------- world ----------
+const W = 1000, H = 480, GROUND = 70, R = 46, BR = 12;
+const GW = 66, GH = 120, BAR = 4;                                   // football goals
+const NET_X = W / 2, NET_W = 10, NET_H = 112;                        // volleyball net
+const STUMP_X = 140, STUMP_H = 74, CREASE_B = 215, CREASE_R = 470, BOWL_LINE = 560, BOWL_X = 790; // cricket
+const SPEED = 480, JUMP = 760, GS = 2450, MAXB = 1150, HANG = 3;
+const GRAV = { football: 1000, volley: 720, cricket: 1050 };
+const BOUNCE = { football: 0.8, volley: 0.8, cricket: 0.62 };
+const SPORTS = {
+  football: { name: 'Football', lens: [[120, '2 minutes'], [60, '1 minute'], [240, '4 minutes'], [480, '8 minutes'], [-5, 'First to 5']],
+    rules: 'Get the ball into the other goal. Head it, bump it, jump on it. Sit in your own goal for 3 seconds and the other team gets a point. A draw at full time goes to golden goal.' },
+  volley: { name: 'Volleyball', lens: [[-7, 'First to 7'], [-15, 'First to 15'], [180, '3 minutes']],
+    rules: 'Keep the ball off the ground on your side of the net. If it lands on your side, the other team scores and serves. The ball drops onto the server to start each rally.' },
+  cricket: { name: 'Cricket', lens: [[1, '1 over each'], [2, '2 overs each'], [3, '3 overs each']],
+    rules: 'Each team bats for the same number of overs. Bowler: press jump to bowl, holding left as you bowl for a faster ball. Batter: you get one hit per ball, then run past the far crease and back for runs. Hit the right-hand wall for 4, or 6 on the full. You are out if the ball hits your stumps before you hit it, if a fielder catches it on the full, or if the ball hits the stumps or the keeper while you are between the creases. An out costs 5 runs.' },
+};
+const TEAMS = [
+  { name: 'Tangerine', c: [tok('--tang'), tok('--tang-2'), tok('--tang-3')] },
+  { name: 'Lagoon', c: [tok('--lag'), tok('--lag-2'), tok('--lag-3')] },
+];
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const timed = (sport, len) => sport !== 'cricket' && len > 0;
+
+const newMatch = (sport, len, ph) => ({ sport, ph, len, sc: [0, 0], tl: timed(sport, len) ? len : 0, gg: false, msg: '', msgT: 0, pause: 0, after: '', slimes: [], ball: { x: W / 2, y: 240, vx: 0, vy: 0 }, kick: 0, goals: 0, serve: 0, ck: null, stillT: 0 });
+const spawnX = (sport, team, i, n) => { const off = (i - (n - 1) / 2) * 115; return team === 0 ? W * 0.25 + off : W * 0.75 - off; };
+
+const setupDelivery = m => {
+  const ck = m.ck, bt = ck.bat, ft = 1 - bt;
+  const bats = m.slimes.filter(s => s.team === bt), flds = m.slimes.filter(s => s.team === ft);
+  m.slimes.forEach(s => Object.assign(s, { active: false, role: '', vx: 0, vy: 0, y: 0, hang: 0 }));
+  if (bats.length) Object.assign(bats[ck.batIdx[bt] % bats.length], { active: true, role: 'bat', x: 190 });
+  if (flds.length) {
+    const bi = ck.bowlIdx[ft] % flds.length;
+    Object.assign(flds[bi], { active: true, role: 'bowl', x: BOWL_X });
+    flds.filter((_, i) => i !== bi).forEach((s, i) => Object.assign(s, { active: true, role: i === 0 ? 'keep' : 'field', x: i === 0 ? 58 : 640 }));
+  }
+  Object.assign(ck, { st: 'hold', hit: false, bounced: false, wall: false, at: 'home', holdT: 0, liveT: 0, ballRuns: 0, down: false });
+  m.stillT = 0;
+  const bw = m.slimes.find(s => s.role === 'bowl');
+  Object.assign(m.ball, { x: bw ? bw.x : BOWL_X, y: R + BR + 2, vx: 0, vy: 0 });
+};
+
+const resetPositions = m => {
+  if (m.sport === 'cricket' && m.ph === 'play' && m.ck) { setupDelivery(m); return; }
+  [0, 1].forEach(team => {
+    const ts = m.slimes.filter(s => s.team === team);
+    ts.forEach((s, i) => Object.assign(s, { x: spawnX(m.sport, team, i, ts.length), y: 0, vx: 0, vy: 0, hang: 0, active: true, role: '' }));
+  });
+  const b = m.ball;
+  if (m.sport === 'volley') {
+    const server = m.slimes.find(s => s.team === m.serve);
+    Object.assign(b, { x: server ? server.x : (m.serve === 0 ? W * 0.25 : W * 0.75), y: 330, vx: 0, vy: 0 });
+  } else Object.assign(b, { x: W / 2, y: 240, vx: 0, vy: 0 });
+  m.stillT = 0;
+};
+const addSlime = (m, id, team, name) => { const s = { id, team, name, x: spawnX(m.sport, team, 0, 1), y: 0, vx: 0, vy: 0, hang: 0, active: true, role: '' }; m.slimes.push(s); return s; };
+
+const kickOff = (m, len) => {
+  Object.assign(m, { ph: 'play', len, sc: [0, 0], tl: timed(m.sport, len) ? len : 0, gg: false, msg: '', msgT: 0, pause: 0, after: '', serve: 0, ck: null });
+  if (m.sport === 'cricket') {
+    m.ck = { inn: 0, bat: 0, balls: 0, per: len * 6, outs: [0, 0], batIdx: [0, 0], bowlIdx: [0, 0] };
+    m.msg = `${TEAMS[0].name} bat first`; m.msgT = 2;
+  } else { m.msg = m.sport === 'volley' ? 'Serve!' : 'Kick off!'; m.msgT = 1.4; }
+  resetPositions(m);
+};
+
+const endMatch = (m, w) => {
+  if (w < 0) m.msg = `It's a draw ${m.sc[0]}–${m.sc[1]}`;
+  else if (m.sport === 'cricket') m.msg = `${TEAMS[w].name} win by ${m.sc[w] - m.sc[1 - w]} run${m.sc[w] - m.sc[1 - w] === 1 ? '' : 's'}`;
+  else m.msg = `${TEAMS[w].name} win ${m.sc[w]}–${m.sc[1 - w]}`;
+  m.pause = 6; m.after = 'end'; m.goals++;
+  if (m.ck) m.ck.st = 'over';
+};
+
+const point = (m, team, why) => {
+  m.goals++;
+  const counted = m.ph === 'play';
+  if (counted) m.sc[team]++;
+  if (m.sport === 'volley') m.serve = team;
+  if (counted && (m.gg || (m.len < 0 && m.sc[team] >= -m.len))) { endMatch(m, team); return; }
+  m.msg = why === 'hang' ? `Goal hanging! Point to ${TEAMS[team].name}` : m.sport === 'volley' ? `Point ${TEAMS[team].name}` : `${TEAMS[team].name} score!`;
+  m.pause = m.sport === 'volley' ? 1.3 : 2; m.after = 'reset';
+};
+
+// cricket bookkeeping
+const batterOf = m => m.slimes.find(s => s.active && s.role === 'bat');
+const outOfGround = s => !!s && s.x > CREASE_B && s.x < CREASE_R;
+const cricketOut = (m, how) => {
+  const ck = m.ck;
+  if (ck.st !== 'live') return;
+  m.sc[ck.bat] -= 5; ck.outs[ck.bat]++; ck.batIdx[ck.bat]++; ck.ballRuns = 0;
+  if (how === 'Bowled') ck.down = true;
+  ck.st = 'dead'; m.msg = `${how}! −5 runs`; m.pause = 2; m.after = 'delivery'; m.goals++;
+};
+const cricketDead = (m, msg) => {
+  const ck = m.ck;
+  if (ck.st !== 'live') return;
+  m.sc[ck.bat] += ck.ballRuns;
+  ck.st = 'dead'; m.msg = msg || (ck.ballRuns ? `${ck.ballRuns} run${ck.ballRuns > 1 ? 's' : ''}` : 'No run');
+  m.pause = ck.ballRuns >= 4 ? 1.8 : 1.2; m.after = 'delivery';
+  if (ck.ballRuns >= 4) m.goals++;
+};
+const nextDelivery = m => {
+  const ck = m.ck;
+  ck.balls++;
+  const chased = ck.inn === 1 && m.sc[ck.bat] > m.sc[1 - ck.bat];
+  if (ck.balls >= ck.per || chased || !m.slimes.some(s => s.team === ck.bat)) {
+    if (ck.inn === 0) {
+      ck.inn = 1; ck.bat = 1; ck.balls = 0;
+      m.msg = `${TEAMS[1].name} need ${m.sc[0] + 1} to win`; m.msgT = 2.5;
+      setupDelivery(m); return;
+    }
+    const d = m.sc[0] - m.sc[1];
+    setupDelivery(m);
+    endMatch(m, d === 0 ? -1 : d > 0 ? 0 : 1);
+    return;
+  }
+  if (ck.balls % 6 === 0) { ck.bowlIdx[1 - ck.bat]++; m.msg = 'End of the over'; m.msgT = 1.5; }
+  setupDelivery(m);
+};
+
+const hitSlime = (m, b, s) => {
+  const dx = b.x - s.x, dy = b.y - s.y, min = R + BR;
+  let nx, ny, pen;
+  if (dy >= 0) {
+    const d = Math.hypot(dx, dy);
+    if (d >= min || d === 0) return false;
+    nx = dx / d; ny = dy / d; pen = min - d;
+  } else if (dy > -BR && Math.abs(dx) < min) {
+    if (Math.abs(dx) < R && b.y > BR + 1) { nx = 0; ny = -1; pen = BR + dy; }
+    else { nx = dx < 0 ? -1 : 1; ny = 0; pen = min - Math.abs(dx); }
+  } else return false;
+  b.x += nx * pen; b.y += ny * pen;
+  const vn = (b.vx - s.vx) * nx + (b.vy - s.vy) * ny;
+  if (vn < 0) { b.vx -= 1.85 * vn * nx; b.vy -= 1.85 * vn * ny; if (-vn > 170) m.kick++; }
+  return true;
+};
+
+const touchesRect = (b, x0, x1, y0, y1) => Math.hypot(b.x - clamp(b.x, x0, x1), b.y - clamp(b.y, y0, y1)) < BR;
+const hitRect = (b, x0, x1, y0, y1) => {
+  const cx = clamp(b.x, x0, x1), cy = clamp(b.y, y0, y1);
+  let dx = b.x - cx, dy = b.y - cy, d = Math.hypot(dx, dy);
+  if (d >= BR) return false;
+  if (d === 0) { dx = 0; dy = b.vy <= 0 ? 1 : -1; d = 1; }
+  const nx = dx / d, ny = dy / d;
+  b.x = cx + nx * BR; b.y = cy + ny * BR;
+  const vn = b.vx * nx + b.vy * ny;
+  if (vn < 0) { b.vx -= 1.7 * vn * nx; b.vy -= 1.7 * vn * ny; }
+  return true;
+};
+
+const overGoal = s => s.x - R * 0.55 < GW || s.x + R * 0.55 > W - GW;
+const xLimits = (m, s) => {
+  if (m.sport === 'volley') return s.team === 0 ? [R, NET_X - NET_W / 2 - R] : [NET_X + NET_W / 2 + R, W - R];
+  if (m.ck && m.ph === 'play' && s.role === 'bowl' && m.ck.st === 'hold') return [BOWL_LINE, W - R];
+  return [R, W - R];
+};
+
+const step = (m, inputOf, dt) => {
+  const ck = m.sport === 'cricket' && m.ph === 'play' ? m.ck : null;
+  if (m.msgT > 0) { m.msgT -= dt; if (m.msgT <= 0 && m.pause <= 0) m.msg = ''; }
+  if (m.pause > 0) {
+    m.pause -= dt;
+    if (m.pause <= 0) {
+      m.msg = '';
+      if (m.after === 'end') { m.ph = m.ph === 'demo' ? 'demo' : 'warm'; m.gg = false; m.ck = null; resetPositions(m); }
+      else if (m.after === 'delivery' && m.ck) nextDelivery(m);
+      else resetPositions(m);
+      return;
+    }
+  } else if (m.ph === 'play' && timed(m.sport, m.len)) {
+    m.tl -= dt;
+    if (m.tl <= 0) {
+      m.tl = 0;
+      if (m.sc[0] !== m.sc[1]) endMatch(m, m.sc[0] > m.sc[1] ? 0 : 1);
+      else if (!m.gg) { m.gg = true; m.msg = m.sport === 'volley' ? 'Golden point: next point wins' : 'Golden goal: next goal wins'; m.msgT = 2.5; }
+    }
+  }
+
+  // bowling
+  const bowler = ck ? m.slimes.find(s => s.active && s.role === 'bowl') : null;
+  if (ck && ck.st === 'hold') {
+    ck.holdT += dt;
+    const bits = bowler ? inputOf(bowler) | 0 : 0;
+    if ((bowler && (bits & 4) && ck.holdT > 0.5) || ck.holdT > (bowler ? 7 : 1.5)) {
+      const bias = ((bits & 1) ? 1 : 0) - ((bits & 2) ? 1 : 0);
+      const sx = bowler ? bowler.x : BOWL_X;
+      Object.assign(m.ball, { x: sx - R - BR - 2, y: R * 0.9, vx: -(480 + bias * 150), vy: 110 + (bias < 0 ? 140 : 0) });
+      ck.st = 'live'; ck.liveT = 0;
+    }
+  } else if (ck && ck.st === 'live') ck.liveT += dt;
+
+  // slimes
+  const active = m.slimes.filter(s => s.active !== false);
+  active.forEach(s => {
+    const bits = inputOf(s) | 0;
+    s.vx = (((bits & 2) ? 1 : 0) - ((bits & 1) ? 1 : 0)) * SPEED;
+    const football = m.sport === 'football';
+    const floor = football && overGoal(s) && s.y >= GH + BAR - 0.5 ? GH + BAR : 0;
+    const holding = ck && ck.st === 'hold' && s.role === 'bowl';
+    if ((bits & 4) && !holding && s.y <= floor + 0.5 && s.vy <= 0) s.vy = JUMP;
+    s.vy -= GS * dt;
+    const py = s.y;
+    s.y += s.vy * dt;
+    const [lo, hi] = xLimits(m, s);
+    s.x = clamp(s.x + s.vx * dt, lo, hi);
+    if (football && overGoal(s)) {
+      if (py >= GH + BAR - 0.5 && s.y < GH + BAR) { s.y = GH + BAR; s.vy = 0; }
+      else if (s.vy > 0 && py + R <= GH - BAR + 0.5 && s.y + R > GH - BAR) { s.y = GH - BAR - R; s.vy = 0; }
+    }
+    if (s.y < 0) { s.y = 0; s.vy = 0; }
+    if (football) {
+      const inOwn = s.team === 0 ? s.x < GW + R * 0.25 : s.x > W - GW - R * 0.25;
+      s.hang = inOwn && s.y < GH ? s.hang + dt : Math.max(0, s.hang - dt * 2);
+      if (s.hang > HANG && m.pause <= 0) { s.hang = 0; point(m, 1 - s.team, 'hang'); }
+    }
+  });
+
+  // opponents bump each other; teammates pass through
+  active.forEach((a, i) => active.slice(i + 1).forEach(b => {
+    if (a.team === b.team) return;
+    const dx = b.x - a.x, minD = R * 1.8;
+    if (Math.abs(dx) < minD && Math.abs(b.y - a.y) < R * 0.8) {
+      const push = (minD - Math.abs(dx)) / 2 * (dx < 0 ? -1 : 1);
+      const [alo, ahi] = xLimits(m, a), [blo, bhi] = xLimits(m, b);
+      a.x = clamp(a.x - push, alo, ahi); b.x = clamp(b.x + push, blo, bhi);
+    }
+  }));
+
+  // ball
+  const b = m.ball;
+  if (ck && ck.st === 'hold') {
+    if (bowler) { b.x = bowler.x; b.y = bowler.y + R + BR; } else { b.x = BOWL_X; b.y = R + BR + 2; }
+    b.vx = 0; b.vy = 0;
+  } else {
+    const n = 3, sdt = dt / n, g = GRAV[m.sport], bounce = BOUNCE[m.sport];
+    const batter = ck ? batterOf(m) : null;
+    Array.from({ length: n }).forEach(() => {
+      b.vy -= g * sdt;
+      b.x += b.vx * sdt; b.y += b.vy * sdt;
+      const live = ck && ck.st === 'live';
+      if (b.x < BR) { b.x = BR; b.vx = Math.abs(b.vx) * 0.85; if (live) { if (ck.hit) ck.wall = true; else cricketDead(m, 'No run'); } }
+      if (b.x > W - BR) { b.x = W - BR; b.vx = -Math.abs(b.vx) * 0.85; if (live && ck.hit) { ck.ballRuns = ck.bounced ? 4 : 6; cricketDead(m, ck.bounced ? 'FOUR!' : 'SIX!'); } }
+      if (b.y > H - BR) { b.y = H - BR; b.vy = -Math.abs(b.vy) * 0.85; }
+      if (b.y < BR) {
+        b.y = BR; b.vy = Math.abs(b.vy) * bounce; b.vx *= m.sport === 'cricket' ? 0.95 : 0.97;
+        if (b.vy < 45) b.vy = 0;
+        if (live && ck.hit) ck.bounced = true;
+        if (m.sport === 'volley' && m.pause <= 0) point(m, b.x < NET_X ? 1 : 0);
+      }
+      if (m.sport === 'football') { hitRect(b, 0, GW, GH - BAR, GH + BAR); hitRect(b, W - GW, W, GH - BAR, GH + BAR); }
+      if (m.sport === 'volley') hitRect(b, NET_X - NET_W / 2, NET_X + NET_W / 2, 0, NET_H);
+      if (m.sport === 'cricket') {
+        if (ck && ck.st === 'live' && touchesRect(b, STUMP_X - 12, STUMP_X + 12, 0, STUMP_H)) {
+          if (!ck.hit && batter) cricketOut(m, 'Bowled');
+          else if (ck.hit && outOfGround(batter)) { ck.down = true; cricketOut(m, 'Run out'); }
+        }
+        hitRect(b, STUMP_X - 12, STUMP_X + 12, 0, STUMP_H);
+      }
+      active.forEach(s => {
+        if (ck && ck.st === 'live') {
+          if (s.role === 'bat' && ck.hit) return;
+          if (s.role === 'bowl' && ck.liveT < 0.35) return;
+        }
+        if (!hitSlime(m, b, s) || !ck || ck.st !== 'live') return;
+        if (s.role === 'bat') { ck.hit = true; ck.bounced = false; ck.wall = false; return; }
+        if (ck.hit && !ck.bounced && (!ck.wall || s.role === 'keep')) cricketOut(m, 'Caught');
+        else if (s.role === 'keep' && outOfGround(batter)) cricketOut(m, ck.hit ? 'Run out' : 'Stumped');
+      });
+      const sp = Math.hypot(b.vx, b.vy);
+      if (sp > MAXB) { b.vx *= MAXB / sp; b.vy *= MAXB / sp; }
+    });
+
+    if (ck && ck.st === 'live') {
+      if (batter && ck.hit) {
+        if (ck.at === 'home' && batter.x >= CREASE_R) { ck.ballRuns++; ck.at = 'away'; }
+        else if (ck.at === 'away' && batter.x <= CREASE_B) { ck.ballRuns++; ck.at = 'home'; }
+      }
+      const still = b.y <= BR + 1 && Math.abs(b.vx) < 30;
+      m.stillT = still ? m.stillT + dt : 0;
+      if (m.stillT > 0.8 || ck.liveT > 12) cricketDead(m);
+    } else if (m.sport === 'cricket' && !ck) {
+      const still = b.y <= BR + 1 && Math.abs(b.vx) < 30;
+      m.stillT = still ? m.stillT + dt : 0;
+      if (m.stillT > 3) resetPositions(m);
+    }
+  }
+
+  if (m.sport === 'football' && m.pause <= 0) {
+    if (b.x < GW - BR && b.y < GH - BAR) point(m, 1);
+    else if (b.x > W - GW + BR && b.y < GH - BAR) point(m, 0);
+  }
+};
+
+// ---------- computer players ----------
+const wobble = s => { if (s.aiOff === undefined || Math.random() < 0.015) s.aiOff = (Math.random() - 0.5) * R * 0.9; return s.aiOff; };
+const go = (s, tx, dead = 8) => { const t = tx + wobble(s); return t < s.x - dead ? 1 : t > s.x + dead ? 2 : 0; };
+const landX = (m, yT = R * 0.9) => {
+  const b = m.ball, g = GRAV[m.sport];
+  const disc = b.vy * b.vy + 2 * g * (b.y - yT);
+  if (disc < 0) return b.x;
+  const t = (b.vy + Math.sqrt(disc)) / g;
+  const span = W - 2 * BR;
+  let x = (b.x + b.vx * t - BR) % (2 * span);
+  if (x < 0) x += 2 * span;
+  return (x > span ? 2 * span - x : x) + BR;
+};
+const aiFootball = (m, s) => {
+  const b = m.ball, dir = s.team === 0 ? 1 : -1;
+  const px = clamp(b.x + b.vx * 0.2, BR, W - BR);
+  let tx = px - dir * R * 0.6;
+  if (s.hang > 1.5) tx = s.team === 0 ? GW + R * 3 : W - GW - R * 3;
+  let bits = go(s, tx);
+  if (Math.abs(b.x - s.x) < R * 1.5 && b.y > R && b.y < R * 4 && b.vy < 60 && s.y === 0 && Math.random() < 0.6) bits |= 4;
+  return bits;
+};
+const aiVolley = (m, s) => {
+  const b = m.ball, dir = s.team === 0 ? 1 : -1;
+  const [lo, hi] = xLimits(m, s);
+  const lx = landX(m);
+  const mine = s.team === 0 ? lx < NET_X : lx > NET_X;
+  const tx = clamp(mine ? lx - dir * R * 0.35 : (lo + hi) / 2, lo, hi);
+  let bits = go(s, tx, 5);
+  if (mine && Math.abs(b.x - s.x) < R * 1.3 && b.y < R * 3.4 && b.y > R && b.vy < 0 && s.y === 0 && Math.random() < 0.5) bits |= 4;
+  return bits;
+};
+const aiCricket = (m, s) => {
+  const ck = m.ck, b = m.ball;
+  if (!ck || m.ph !== 'play') return aiFootball(m, s);
+  if (s.role === 'bowl') {
+    if (ck.st === 'hold') {
+      const tx = 790 + Math.sin(ck.balls * 1.7) * 60;
+      if (ck.holdT > 1 && Math.abs(tx - s.x) < 20) return (ck.balls % 3 === 0 ? 1 : 0) | 4;
+      return go(s, tx);
+    }
+    return ck.hit ? go(s, landX(m)) : 0;
+  }
+  if (s.role === 'keep') return go(s, ck.st === 'live' && b.x < 320 ? clamp(b.x, R, 110) : 58);
+  if (s.role === 'field') return ck.hit ? go(s, landX(m)) : go(s, 640);
+  if (s.role === 'bat') {
+    if (ck.st !== 'live') return go(s, 190);
+    if (!ck.hit) {
+      const dx = b.x - s.x;
+      if (dx > 0 && dx < 150 && b.vx < 0) return 2 | (b.y > R * 0.8 ? 4 : 0);
+      return go(s, 190);
+    }
+    const near = m.slimes.some(f => f.active && f.team !== s.team && Math.abs(f.x - b.x) < 110);
+    const far = b.x > 600 && !near;
+    if (ck.at === 'home') return far ? go(s, CREASE_R + 70) : go(s, 180);
+    return far && b.x > 720 ? go(s, CREASE_B - 50) : go(s, CREASE_R + 70);
+  }
+  return 0;
+};
+const ai = (m, s) => m.sport === 'volley' ? aiVolley(m, s) : m.sport === 'cricket' ? aiCricket(m, s) : aiFootball(m, s);
+
+const serialize = (m, t) => {
+  const shade = [0, 0];
+  const ck = m.ck && m.ph === 'play' ? m.ck : null;
+  const v = {
+    t: Math.round(t), sp: m.sport, ph: m.ph, sc: m.sc.slice(), tl: Math.ceil(m.tl), len: m.len, gg: m.gg ? 1 : 0, msg: m.msg, k: m.kick, gl: m.goals,
+    s: m.slimes.filter(s => s.active !== false).map(s => [Math.round(s.x), Math.round(s.y), s.team, shade[s.team]++ % 3, s.name, Math.round(Math.min(s.hang / HANG, 1) * 10)]),
+    b: [Math.round(m.ball.x), Math.round(m.ball.y)],
+  };
+  if (ck) v.ck = [ck.inn, ck.bat, ck.balls, ck.per, ck.outs[0], ck.outs[1], ck.down ? 1 : 0];
+  return v;
+};
+
+// ---------- drawing ----------
+const cv = $('#pitch'), ctx = cv.getContext('2d');
+let k = 1, crowd = null;
+const resize = () => {
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  const w = Math.round(cv.clientWidth * dpr) || 1000;
+  cv.width = w; cv.height = Math.round(w * 0.55);
+  k = w / W;
+  crowd = document.createElement('canvas');
+  crowd.width = cv.width; crowd.height = Math.max(1, Math.round(H * 0.42 * k));
+  const c = crowd.getContext('2d');
+  const hues = [tok('--tang'), tok('--lag'), tok('--chalk'), tok('--flood'), tok('--muted')];
+  let seed = 7; const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
+  Array.from({ length: 1400 }).forEach(() => {
+    const y = rnd() * crowd.height, x = rnd() * crowd.width;
+    c.globalAlpha = 0.12 + (y / crowd.height) * 0.35;
+    c.fillStyle = hues[Math.floor(rnd() * hues.length)];
+    c.beginPath(); c.arc(x, y, (1.2 + rnd() * 1.6) * k, 0, Math.PI * 2); c.fill();
+  });
+};
+new ResizeObserver(resize).observe(cv);
+resize();
+
+const X = x => x * k, Y = y => (H - y) * k;
+const font = (px, face) => `${face === 'b' ? '' : '500 '}${px * k}px ${face === 'b' ? 'Bungee, "Arial Black", sans-serif' : 'Rubik, system-ui, sans-serif'}`;
+
+const drawGoals = () => {
+  [[0, GW], [W - GW, W]].forEach(([x0, x1]) => {
+    ctx.save();
+    ctx.beginPath(); ctx.rect(X(x0), Y(GH), X(x1 - x0), Y(0) - Y(GH)); ctx.clip();
+    ctx.fillStyle = 'rgba(243,241,255,0.06)'; ctx.fillRect(X(x0), Y(GH), X(x1 - x0), Y(0) - Y(GH));
+    ctx.strokeStyle = 'rgba(243,241,255,0.28)'; ctx.lineWidth = Math.max(1, k);
+    Array.from({ length: 22 }).forEach((_, i) => {
+      const o = i * 12 - 60;
+      ctx.beginPath(); ctx.moveTo(X(x0 + o), Y(0)); ctx.lineTo(X(x0 + o + 130), Y(GH)); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(X(x0 + o), Y(GH)); ctx.lineTo(X(x0 + o + 130), Y(0)); ctx.stroke();
+    });
+    ctx.restore();
+    ctx.fillStyle = tok('--chalk');
+    ctx.fillRect(X(x0), Y(GH + BAR), X(x1 - x0), (2 * BAR) * k);
+    const post = x0 === 0 ? x1 : x0;
+    ctx.fillRect(X(post) - 2 * k, Y(GH), 4 * k, Y(0) - Y(GH));
+  });
+};
+const drawNet = () => {
+  const x0 = NET_X - NET_W / 2;
+  ctx.fillStyle = 'rgba(243,241,255,0.12)';
+  ctx.fillRect(X(x0), Y(NET_H), NET_W * k, Y(0) - Y(NET_H));
+  ctx.strokeStyle = 'rgba(243,241,255,0.45)'; ctx.lineWidth = Math.max(1, k);
+  Array.from({ length: 9 }).forEach((_, i) => { const y = (i + 1) * NET_H / 10; ctx.beginPath(); ctx.moveTo(X(x0), Y(y)); ctx.lineTo(X(x0 + NET_W), Y(y)); ctx.stroke(); });
+  ctx.fillStyle = tok('--chalk');
+  ctx.fillRect(X(x0) - 1 * k, Y(NET_H), (NET_W + 2) * k, 7 * k);
+  ctx.fillRect(X(NET_X) - 1.5 * k, Y(NET_H), 3 * k, Y(0) - Y(NET_H));
+};
+const drawCricket = down => {
+  ctx.fillStyle = tok('--strip');
+  ctx.globalAlpha = 0.55;
+  ctx.fillRect(X(STUMP_X - 50), Y(0), X(CREASE_R + 50 - (STUMP_X - 50)), 22 * k);
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = 'rgba(243,241,255,0.85)';
+  [CREASE_B, CREASE_R].forEach(x => ctx.fillRect(X(x) - 1.5 * k, Y(0), 3 * k, 30 * k));
+  ctx.fillStyle = 'rgba(243,241,255,0.35)';
+  ctx.fillRect(X(BOWL_LINE) - 1 * k, Y(0), 2 * k, 30 * k);
+  ctx.fillStyle = tok('--wood');
+  [-9, 0, 9].forEach(o => ctx.fillRect(X(STUMP_X + o) - 2 * k, Y(STUMP_H), 4 * k, STUMP_H * k));
+  if (down) {
+    ctx.save(); ctx.translate(X(STUMP_X - 22), Y(STUMP_H + 26)); ctx.rotate(-0.7); ctx.fillRect(-8 * k, -2 * k, 16 * k, 4 * k); ctx.restore();
+    ctx.save(); ctx.translate(X(STUMP_X + 18), Y(STUMP_H + 34)); ctx.rotate(0.9); ctx.fillRect(-8 * k, -2 * k, 16 * k, 4 * k); ctx.restore();
+  } else {
+    ctx.fillRect(X(STUMP_X - 11), Y(STUMP_H + 4), 10 * k, 3 * k);
+    ctx.fillRect(X(STUMP_X + 1), Y(STUMP_H + 4), 10 * k, 3 * k);
+  }
+};
+
+const draw = v => {
+  const cw = cv.width, ch = cv.height, sp = v.sp || 'football';
+  const sky = ctx.createLinearGradient(0, 0, 0, Y(0));
+  sky.addColorStop(0, tok('--night')); sky.addColorStop(1, tok('--night-2'));
+  ctx.fillStyle = sky; ctx.fillRect(0, 0, cw, ch);
+  [0.08, 0.92].forEach(fx => {
+    const g = ctx.createRadialGradient(cw * fx, 0, 0, cw * fx, 0, cw * 0.45);
+    g.addColorStop(0, 'rgba(255,232,163,0.20)'); g.addColorStop(1, 'rgba(255,232,163,0)');
+    ctx.fillStyle = g; ctx.fillRect(0, 0, cw, ch);
+  });
+  if (crowd) ctx.drawImage(crowd, 0, Y(H * 0.95));
+
+  const stripes = 12;
+  Array.from({ length: stripes }).forEach((_, i) => {
+    ctx.fillStyle = i % 2 ? tok('--grass') : tok('--grass-2');
+    ctx.fillRect(Math.floor(i * cw / stripes), Y(0), Math.ceil(cw / stripes) + 1, ch - Y(0));
+  });
+  ctx.fillStyle = 'rgba(243,241,255,0.85)';
+  ctx.fillRect(0, Y(0), cw, Math.max(2, 3 * k));
+  if (sp !== 'cricket') ctx.fillRect(X(W / 2) - k, Y(0), 2 * k, ch - Y(0));
+
+  if (sp === 'football') drawGoals();
+  else if (sp === 'volley') drawNet();
+  else drawCricket(v.ck && v.ck[6]);
+
+  const [bx, by] = v.b;
+  const sh = clamp(1 - by / H, 0.25, 1);
+  ctx.fillStyle = `rgba(0,0,0,${0.35 * sh})`;
+  ctx.beginPath(); ctx.ellipse(X(bx), Y(0) + 4 * k, BR * k * 1.3 * sh, 4 * k * sh, 0, 0, Math.PI * 2); ctx.fill();
+
+  v.s.forEach(([x, y, team, shade, name, hang]) => {
+    const col = TEAMS[team].c[shade] || TEAMS[team].c[0];
+    ctx.fillStyle = 'rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(X(x), Y(0) + 4 * k, R * k * (1 - Math.min(y, 200) / 400), 5 * k, 0, 0, Math.PI * 2); ctx.fill();
+    const g = ctx.createLinearGradient(0, Y(y + R), 0, Y(y));
+    g.addColorStop(0, col); g.addColorStop(1, TEAMS[team].c[2]);
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(X(x), Y(y), R * k, Math.PI, 0); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.22)';
+    ctx.beginPath(); ctx.ellipse(X(x - R * 0.35), Y(y + R * 0.68), R * 0.22 * k, R * 0.1 * k, -0.5, 0, Math.PI * 2); ctx.fill();
+    const face = sp === 'cricket' ? (bx < x ? -1 : 1) : team === 0 ? 1 : -1;
+    const ex = x + face * R * 0.42, ey = y + R * 0.55;
+    const ang = Math.atan2(by - ey, bx - ex);
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath(); ctx.arc(X(ex), Y(ey), R * 0.19 * k, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#0c1130';
+    ctx.beginPath(); ctx.arc(X(ex + Math.cos(ang) * R * 0.08), Y(ey + Math.sin(ang) * R * 0.08), R * 0.09 * k, 0, Math.PI * 2); ctx.fill();
+    if (hang > 3) {
+      ctx.strokeStyle = tok('--flood'); ctx.lineWidth = 3 * k;
+      ctx.beginPath(); ctx.arc(X(x), Y(y + R + 30), 9 * k, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * hang / 10); ctx.stroke();
+    }
+    if (name) {
+      ctx.font = font(15); ctx.textAlign = 'center'; ctx.fillStyle = 'rgba(243,241,255,0.9)';
+      ctx.fillText(name, X(x), Y(y + R + 10));
+    }
+  });
+
+  ctx.fillStyle = sp === 'cricket' ? '#d8433a' : tok('--flood');
+  ctx.beginPath(); ctx.arc(X(bx), Y(by), BR * k, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.beginPath(); ctx.arc(X(bx - 4), Y(by + 4), BR * 0.32 * k, 0, Math.PI * 2); ctx.fill();
+
+  // scoreboard
+  ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
+  ctx.font = font(44, 'b');
+  ctx.fillStyle = TEAMS[0].c[0]; ctx.fillText(String(v.sc[0]), X(W / 2 - 80), 58 * k);
+  ctx.fillStyle = TEAMS[1].c[0]; ctx.fillText(String(v.sc[1]), X(W / 2 + 80), 58 * k);
+  ctx.font = font(17, 'b'); ctx.fillStyle = tok('--chalk');
+  let clock = '', sub = '';
+  if (v.ph === 'warm') clock = 'WARM-UP';
+  else if (v.ph === 'demo') clock = 'DEMO';
+  else if (v.ck) {
+    const [inn, bat, balls, per, o0, o1] = v.ck;
+    clock = `OVER ${Math.floor(balls / 6)}.${balls % 6}`;
+    sub = inn === 1 ? `${TEAMS[bat].name} need ${Math.max(0, v.sc[1 - bat] + 1 - v.sc[bat])} off ${Math.max(0, per - balls)}` : `${TEAMS[bat].name} batting · ${per / 6} over${per > 6 ? 's' : ''}`;
+    ctx.font = font(12); ctx.fillStyle = tok('--muted');
+    ctx.fillText(`${o0} out`, X(W / 2 - 80), 76 * k); ctx.fillText(`${o1} out`, X(W / 2 + 80), 76 * k);
+    ctx.font = font(17, 'b'); ctx.fillStyle = tok('--chalk');
+  }
+  else if (v.gg) clock = 'GOLDEN';
+  else if (v.len > 0) clock = `${Math.floor(v.tl / 60)}:${String(v.tl % 60).padStart(2, '0')}`;
+  else clock = `TO ${-v.len}`;
+  ctx.fillText(clock, X(W / 2), 48 * k);
+  if (sub) { ctx.font = font(13); ctx.fillStyle = tok('--muted'); ctx.fillText(sub, X(W / 2), 96 * k); }
+
+  if (v.msg) {
+    ctx.font = font(30, 'b');
+    const tw = ctx.measureText(v.msg).width;
+    ctx.fillStyle = 'rgba(12,17,48,0.72)';
+    ctx.fillRect(X(W / 2) - tw / 2 - 24 * k, Y(H * 0.62) - 40 * k, tw + 48 * k, 58 * k);
+    ctx.fillStyle = tok('--flood');
+    ctx.fillText(v.msg, X(W / 2), Y(H * 0.62));
+  }
+};
+
+// ---------- sound ----------
+let ac = null;
+const unlockAudio = () => { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { ac = null; } } };
+const tone = (f, d, type = 'triangle', delay = 0, vol = 0.15) => {
+  if (!ac) return;
+  const o = ac.createOscillator(), g = ac.createGain(), t = ac.currentTime + delay;
+  o.type = type; o.frequency.setValueAtTime(f, t);
+  g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.001, t + d);
+  o.connect(g).connect(ac.destination); o.start(t); o.stop(t + d);
+};
+let lastK = 0, lastG = 0;
+const sounds = v => {
+  if (v.k > lastK) tone(180 + Math.random() * 60, 0.09, 'square', 0, 0.06);
+  if (v.gl > lastG) [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.18, 'triangle', i * 0.09));
+  lastK = v.k; lastG = v.gl;
+};
+
+// ---------- input ----------
+const keys = new Set();
+const touch = { bits: 0 };
+const bitsFrom = set => {
+  const has = c => keys.has(c);
+  const L = set !== 'arrows' && has('KeyA') || set !== 'wasd' && has('ArrowLeft');
+  const Rt = set !== 'arrows' && has('KeyD') || set !== 'wasd' && has('ArrowRight');
+  const J = set !== 'arrows' && has('KeyW') || set !== 'wasd' && has('ArrowUp') || set === 'both' && has('Space');
+  return (L ? 1 : 0) | (Rt ? 2 : 0) | (J ? 4 : 0);
+};
+const typing = e => /^(INPUT|SELECT|TEXTAREA)$/.test(e.target.tagName);
+addEventListener('keydown', e => {
+  if (typing(e)) return;
+  if (mode !== 'menu' && ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
+  keys.add(e.code); unlockAudio(); onInputChange();
+});
+addEventListener('keyup', e => { keys.delete(e.code); onInputChange(); });
+addEventListener('blur', () => { keys.clear(); touch.bits = 0; onInputChange(); });
+document.querySelectorAll('#pad button').forEach(btn => {
+  const bit = +btn.dataset.b;
+  const on = e => { e.preventDefault(); unlockAudio(); touch.bits |= bit; btn.classList.add('down'); onInputChange(); };
+  const off = () => { touch.bits &= ~bit; btn.classList.remove('down'); onInputChange(); };
+  btn.addEventListener('pointerdown', on);
+  ['pointerup', 'pointercancel', 'pointerleave'].forEach(t => btn.addEventListener(t, off));
+});
+addEventListener('pointerdown', unlockAudio, { once: true });
+
+// ---------- state ----------
+let mode = 'menu'; // menu | local | host | client
+let m = newMatch('football', 0, 'demo');
+let localCpu = true;
+const startDemo = () => { m = newMatch('football', 0, 'demo'); addSlime(m, 'cpuA', 0, ''); addSlime(m, 'cpuB', 1, ''); resetPositions(m); };
+startDemo();
+
+const nameEl = $('#nm');
+const store = { get: k => { try { return localStorage.getItem(k); } catch (e) { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* ignore */ } } };
+nameEl.value = store.get('gloop-name') || `Player ${Math.floor(10 + Math.random() * 89)}`;
+const myName = () => (nameEl.value.trim() || 'Player').slice(0, 14);
+nameEl.addEventListener('change', () => store.set('gloop-name', myName()));
+
+const show = id => ['menu', 'room', 'local'].forEach(p => { $('#' + p).hidden = p !== id; });
+const setPad = on => $('#pad').classList.toggle('on', on);
+const fillLens = (sel, sport) => {
+  sel.replaceChildren(...SPORTS[sport].lens.map(([v, t]) => { const o = document.createElement('option'); o.value = v; o.textContent = t; return o; }));
+};
+const markSport = (group, sport) => document.querySelectorAll(`${group} [data-sport]`).forEach(b => b.setAttribute('aria-pressed', String(b.dataset.sport === sport)));
+const lenLabel = (sport, len) => ((SPORTS[sport] || SPORTS.football).lens.find(([v]) => v === len) || [0, ''])[1];
+
+// rebuild the match for a new sport, keeping the players
+const switchSport = (sport, len) => {
+  const players = m.slimes.map(s => [s.id, s.team, s.name]);
+  m = newMatch(sport, len, 'warm');
+  players.forEach(([id, team, name]) => addSlime(m, id, team, name));
+  resetPositions(m);
+};
+
+// ---------- local play ----------
+let localSport = 'football';
+const localKeys = () => {
+  const cricket = localSport === 'cricket';
+  if (localCpu) return cricket ? 'Move with A/D or the arrow keys, jump with W, ↑ or Space. You bat first: hit the ball once, then run. When you bowl, press jump to let it go.' : 'Move with A/D or the arrow keys, jump with W, ↑ or Space. Warm up, then press Kick off.';
+  return 'Tangerine: A/D to move, W to jump. Lagoon: ←/→ to move, ↑ to jump. Press Kick off when you are both ready.';
+};
+const startLocal = cpu => {
+  localCpu = cpu; mode = 'local';
+  fillLens($('#llen'), localSport); markSport('#lsports', localSport);
+  m = newMatch(localSport, +$('#llen').value, 'warm');
+  addSlime(m, 'p1', 0, cpu ? myName() : 'Player 1');
+  addSlime(m, 'p2', 1, cpu ? 'Computer' : 'Player 2');
+  resetPositions(m);
+  $('#localTitle').textContent = cpu ? 'You vs the computer' : 'Player 1 vs Player 2';
+  $('#localKeys').textContent = localKeys();
+  $('#localRules').textContent = SPORTS[localSport].rules;
+  show('local'); setPad(cpu);
+};
+document.querySelectorAll('#lsports [data-sport]').forEach(b => {
+  b.onclick = () => {
+    localSport = b.dataset.sport; markSport('#lsports', localSport); fillLens($('#llen'), localSport);
+    switchSport(localSport, +$('#llen').value);
+    $('#localKeys').textContent = localKeys(); $('#localRules').textContent = SPORTS[localSport].rules;
+  };
+});
+$('#cpuBtn').onclick = () => { unlockAudio(); startLocal(true); };
+$('#duoBtn').onclick = () => { unlockAudio(); startLocal(false); };
+$('#lkickBtn').onclick = () => { kickOff(m, +$('#llen').value); $('#lkickBtn').blur(); };
+$('#backBtn').onclick = () => { mode = 'menu'; startDemo(); show('menu'); setPad(false); };
+
+// ---------- online (browser to browser) ----------
+const PREFIX = 'gloopcup-';
+const netOK = typeof window.Peer === 'function';
+let peer = null, hostConn = null, clients = new Map();
+let code = '', myPeer = '', myTeam = -1, hostTeam = 0, hostSport = 'football';
+let order = [], roster = [], lastRosterKey = '';
+let snaps = [], offset = null, hostSeenAt = 0, hostMsg = null, lastHostP = null, joinedTeamAsked = false, lastSentAt = 0;
+const cleanName = v => (typeof v === 'string' ? v : '').replace(/[^\p{L}\p{N} '._-]/gu, '').trim().slice(0, 14) || 'Player';
+const cleanCode = v => (typeof v === 'string' ? v : '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4);
+const cleanSport = v => (v === 'volley' || v === 'cricket') ? v : 'football';
+const inviteLink = () => `${location.origin}${location.pathname}#${code}`;
+const setHash = h => { try { history.replaceState(null, '', h ? '#' + h : location.pathname + location.search); } catch (e) { /* ignore */ } };
+
+const shutdown = () => { const p = peer; peer = null; hostConn = null; clients = new Map(); if (p) { try { p.destroy(); } catch (e) { /* ignore */ } } };
+
+const enterRoomUI = () => {
+  $('#roomCode').textContent = code;
+  $('#hostCtl').hidden = mode !== 'host';
+  $('#roomStatus').textContent = mode === 'host' ? 'Send your brothers the invite link. Keep this tab in front while you host: the game runs here.' : 'Connected. Waiting for the host…';
+  $('#roomRules').textContent = SPORTS[hostSport].rules;
+  show('room'); setPad(true);
+  lastRosterKey = '';
+};
+
+const leaveGame = why => {
+  shutdown();
+  mode = 'menu'; code = ''; snaps = []; offset = null; order = []; roster = []; myTeam = -1; hostMsg = null; lastHostP = null;
+  startDemo(); show('menu'); setPad(false); setHash('');
+  $('#menuStatus').textContent = why || '';
+};
+
+const hostGame = (tries = 0) => {
+  if (!netOK) return;
+  shutdown();
+  const letters = 'ABCDEFGHJKMNPQRSTUVWXYZ';
+  const c = Array.from({ length: 4 }, () => letters[Math.floor(Math.random() * letters.length)]).join('');
+  const p = new Peer(PREFIX + c.toLowerCase());
+  peer = p;
+  $('#menuStatus').textContent = 'Opening a game…';
+  p.on('open', id => {
+    if (peer !== p) return;
+    myPeer = id; code = c; mode = 'host'; hostTeam = 0; order = []; roster = []; hostSport = 'football';
+    markSport('#sports', hostSport); fillLens($('#len'), hostSport);
+    m = newMatch(hostSport, +$('#len').value, 'warm');
+    $('#menuStatus').textContent = '';
+    setHash(code); enterRoomUI();
+  });
+  p.on('connection', conn => {
+    if (clients.size >= 8) { conn.on('open', () => conn.close()); return; }
+    conn.on('open', () => clients.set(conn.peer, { conn, nm: 'Player', tm: -1, in: 0, seen: performance.now() }));
+    conn.on('data', d => {
+      const cl = clients.get(conn.peer);
+      if (!cl || !d || typeof d !== 'object') return;
+      cl.seen = performance.now();
+      if ('nm' in d) cl.nm = cleanName(d.nm);
+      if (d.tm === 0 || d.tm === 1 || d.tm === -1) cl.tm = d.tm;
+      cl.in = (d.in | 0) & 7;
+    });
+    const drop = () => clients.delete(conn.peer);
+    conn.on('close', drop); conn.on('error', drop);
+  });
+  p.on('disconnected', () => { if (peer === p) { try { p.reconnect(); } catch (e) { /* ignore */ } } });
+  p.on('error', err => {
+    if (peer !== p) return;
+    if (err.type === 'unavailable-id' && tries < 3) { hostGame(tries + 1); return; }
+    if (mode === 'host') { $('#roomStatus').textContent = 'Lost touch with the game finder. Players already in can keep playing; new players may not get in.'; return; }
+    shutdown(); $('#menuStatus').textContent = 'Could not open a game. Check your internet connection and try again.';
+  });
+};
+
+const myBits = () => bitsFrom('both') | touch.bits;
+const sendMine = () => {
+  if (mode !== 'client' || !hostConn || !hostConn.open) return;
+  lastSentAt = performance.now();
+  try { hostConn.send({ nm: myName(), tm: myTeam, in: myBits() }); } catch (e) { /* ignore */ }
+};
+let lastSentIn = -1;
+const onInputChange = () => { if (mode === 'client') { const b = myBits(); if (b !== lastSentIn) { lastSentIn = b; sendMine(); } } };
+
+const joinGame = c => {
+  c = cleanCode(c);
+  if (!netOK) return;
+  if (c.length !== 4) { $('#menuStatus').textContent = 'Game codes are 4 letters.'; return; }
+  unlockAudio(); shutdown();
+  const p = new Peer();
+  peer = p;
+  $('#menuStatus').textContent = `Looking for game ${c}…`;
+  p.on('open', id => {
+    if (peer !== p) return;
+    myPeer = id;
+    const conn = p.connect(PREFIX + c.toLowerCase(), { reliable: false, serialization: 'json' });
+    hostConn = conn;
+    conn.on('open', () => {
+      if (peer !== p) return;
+      code = c; mode = 'client'; myTeam = -1; joinedTeamAsked = false; lastSentIn = -1; snaps = []; offset = null; hostMsg = null; lastHostP = null; hostSeenAt = performance.now();
+      $('#menuStatus').textContent = '';
+      setHash(code); enterRoomUI(); sendMine();
+    });
+    conn.on('data', d => { if (peer === p && d && typeof d === 'object' && d.r === 'host') { hostMsg = d; hostSeenAt = performance.now(); } });
+    conn.on('close', () => { if (peer === p && mode === 'client') leaveGame('The host left the game.'); });
+  });
+  p.on('error', err => {
+    if (peer !== p || mode === 'client') return;
+    leaveGame(err.type === 'peer-unavailable' ? `No game found with code ${c}. Check the code with whoever is hosting.` : 'Could not connect. Check your internet connection and try again.');
+  });
+  setTimeout(() => {
+    if (peer === p && mode !== 'client') leaveGame(`Could not reach game ${c}. Some home or work networks block direct connections; try another network or a phone hotspot.`);
+  }, 15000);
+};
+
+const pickTeam = t => {
+  if (mode === 'host') hostTeam = t;
+  else if (mode === 'client') { myTeam = t; sendMine(); }
+};
+document.querySelectorAll('[data-team]').forEach(b => { b.onclick = () => pickTeam(+b.dataset.team); });
+document.querySelectorAll('#sports [data-sport]').forEach(b => {
+  b.onclick = () => {
+    if (mode !== 'host') return;
+    hostSport = b.dataset.sport; markSport('#sports', hostSport); fillLens($('#len'), hostSport);
+    switchSport(hostSport, +$('#len').value);
+    $('#roomRules').textContent = SPORTS[hostSport].rules;
+  };
+});
+$('#len').onchange = () => { if (mode === 'host' && m.ph !== 'play') m.len = +$('#len').value; };
+$('#hostBtn').onclick = () => { unlockAudio(); hostGame(); };
+$('#joinForm').onsubmit = e => { e.preventDefault(); joinGame($('#code').value); };
+$('#leaveBtn').onclick = () => leaveGame('');
+$('#kickBtn').onclick = () => { if (mode === 'host') { kickOff(m, +$('#len').value); $('#kickBtn').blur(); } };
+$('#copyBtn').onclick = () => {
+  const done = () => { $('#copyBtn').textContent = 'Link copied'; setTimeout(() => { $('#copyBtn').textContent = 'Copy invite link'; }, 1800); };
+  const fallback = () => { $('#copyBtn').textContent = inviteLink(); };
+  try { navigator.clipboard.writeText(inviteLink()).then(done, fallback); } catch (e) { fallback(); }
+};
+nameEl.addEventListener('change', () => sendMine());
+
+// host: build the roster from everyone connected
+const hostSync = now => {
+  clients.forEach((cl, id) => { if (now - cl.seen > 6000) { try { cl.conn.close(); } catch (e) { /* ignore */ } clients.delete(id); } });
+  const ps = [{ peer: myPeer, me: true, nm: myName(), tm: hostTeam, in: 0 }, ...[...clients].map(([id, cl]) => ({ peer: id, me: false, nm: cl.nm, tm: cl.tm, in: cl.in }))];
+  const seen = new Set(ps.map(p => p.peer));
+  order = order.filter(id => seen.has(id));
+  ps.forEach(p => { if (!order.includes(p.peer)) order.push(p.peer); });
+  const byPeer = new Map(ps.map(p => [p.peer, p]));
+  const count = [0, 0];
+  roster = order.map(id => {
+    const p = byPeer.get(id);
+    const want = p.tm === 0 || p.tm === 1 ? p.tm : -1;
+    const team = want >= 0 && count[want] < 3 ? want : -1;
+    if (team >= 0) count[team]++;
+    return { id, nm: p.nm, team, in: p.in };
+  });
+  const playing = roster.filter(r => r.team >= 0);
+  const midCricket = m.sport === 'cricket' && m.ph === 'play';
+  m.slimes = m.slimes.filter(s => playing.some(r => r.id === s.id));
+  playing.forEach(r => {
+    const s = m.slimes.find(x => x.id === r.id);
+    if (!s) {
+      const ns = addSlime(m, r.id, r.team, r.nm);
+      const mates = m.slimes.filter(x => x.team === r.team).length;
+      ns.x = spawnX(m.sport, r.team, mates - 1, mates);
+      if (m.sport === 'volley') ns.x = clamp(ns.x, ...xLimits(m, ns));
+      if (midCricket) ns.active = false;
+    } else {
+      s.name = r.nm;
+      if (s.team !== r.team) {
+        Object.assign(s, { team: r.team, x: spawnX(m.sport, r.team, 0, 1), y: 0, hang: 0 });
+        if (midCricket) { s.active = false; s.role = ''; }
+      }
+    }
+  });
+};
+
+const renderRoom = (rost, hostName, len, sport) => {
+  const key = JSON.stringify([rost, hostName, len, sport, myPeer, mode]);
+  if (key === lastRosterKey) return;
+  lastRosterKey = key;
+  [0, 1].forEach(t => {
+    const ul = $('#team' + t); ul.replaceChildren();
+    const members = rost.filter(r => r[2] === t);
+    members.forEach(r => { const li = document.createElement('li'); li.textContent = cleanName(r[1]); if (r[0] === myPeer) li.className = 'me'; ul.append(li); });
+    if (!members.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'Nobody yet'; ul.append(li); }
+    const full = members.length >= 3 && !members.some(r => r[0] === myPeer);
+    const mine = members.some(r => r[0] === myPeer);
+    const btn = document.querySelector(`[data-team="${t}"]`);
+    btn.disabled = full || mine;
+    btn.textContent = mine ? 'You are here' : full ? 'Team full' : `Play for ${TEAMS[t].name}`;
+  });
+  const watchers = rost.filter(r => r[2] < 0).map(r => cleanName(r[1]) + (r[0] === myPeer ? ' (you)' : ''));
+  $('#watchers').textContent = watchers.length ? `Watching: ${watchers.join(', ')}` : '';
+  if (mode === 'client') {
+    const lt = lenLabel(sport, len);
+    $('#roomStatus').textContent = `${cleanName(hostName)} is hosting ${SPORTS[sport].name.toLowerCase()}${lt ? ', ' + lt.toLowerCase() : ''}. The host kicks off.`;
+    $('#roomRules').textContent = SPORTS[sport].rules;
+  }
+};
+
+// client: smooth between host snapshots
+const lerpView = (a, b, f) => {
+  const v = { ...b };
+  if (a.s.length === b.s.length) v.s = b.s.map((s, i) => { const o = a.s[i]; return o[4] === s[4] && o[2] === s[2] ? [o[0] + (s[0] - o[0]) * f, o[1] + (s[1] - o[1]) * f, ...s.slice(2)] : s; });
+  const db = Math.hypot(b.b[0] - a.b[0], b.b[1] - a.b[1]);
+  if (db < 220) v.b = [a.b[0] + (b.b[0] - a.b[0]) * f, a.b[1] + (b.b[1] - a.b[1]) * f];
+  return v;
+};
+const validView = g => g && Array.isArray(g.s) && Array.isArray(g.b) && Array.isArray(g.sc) && typeof g.t === 'number';
+const clientView = now => {
+  if (now - lastSentAt > 250) sendMine();
+  if (now - hostSeenAt > 6000) { leaveGame('Lost the connection to the host.'); return null; }
+  const pr = hostMsg;
+  if (pr && pr !== lastHostP) {
+    lastHostP = pr;
+    if (validView(pr.g)) {
+      const est = pr.g.t - now;
+      offset = offset === null || est > offset ? est : offset + (est - offset) * 0.02;
+      if (!snaps.length || pr.g.t > snaps[snaps.length - 1].t) snaps.push(pr.g);
+      if (snaps.length > 30) snaps.shift();
+    }
+    const rost = Array.isArray(pr.rost) ? pr.rost.filter(r => Array.isArray(r)).slice(0, 16) : [];
+    if (myTeam === -1 && rost.length && !joinedTeamAsked) {
+      joinedTeamAsked = true;
+      const c = [0, 1].map(t => rost.filter(r => r[2] === t).length);
+      pickTeam(c[0] <= c[1] ? 0 : 1);
+    }
+    renderRoom(rost, pr.nm, pr.len, cleanSport(pr.g && pr.g.sp));
+  }
+  if (!snaps.length) return null;
+  const rt = now + offset - 110;
+  const i = snaps.findIndex(s => s.t > rt);
+  if (i === -1) return snaps[snaps.length - 1];
+  if (i === 0) return snaps[0];
+  const a = snaps[i - 1], b = snaps[i];
+  return lerpView(a, b, clamp((rt - a.t) / Math.max(1, b.t - a.t), 0, 1));
+};
+
+// ---------- main loop ----------
+let acc = 0, last = performance.now(), lastView = serialize(m, 0), hostTick = 0;
+const DT = 1 / 60;
+const inputFor = s => {
+  if (mode === 'menu') return ai(m, s);
+  if (mode === 'local') {
+    if (s.id === 'p1') return localCpu ? bitsFrom('both') | touch.bits : bitsFrom('wasd');
+    return localCpu ? ai(m, s) : bitsFrom('arrows');
+  }
+  if (s.id === myPeer) return myBits();
+  const r = roster.find(x => x.id === s.id);
+  return r ? r.in : 0;
+};
+const frame = now => {
+  const dt = Math.min(0.1, (now - last) / 1000); last = now;
+  let view = null;
+  if (mode === 'client') {
+    view = clientView(now);
+  } else {
+    if (mode === 'host') hostSync(now);
+    acc += dt;
+    while (acc >= DT) { step(m, inputFor, DT); acc -= DT; }
+    view = serialize(m, now);
+    if (mode === 'host') {
+      const rost = roster.map(r => [r.id, r.nm, r.team]);
+      hostTick++;
+      if (hostTick % 2 === 0) {
+        const msg = { r: 'host', nm: myName(), len: m.len, rost, g: view };
+        clients.forEach(cl => { if (cl.conn.open) { try { cl.conn.send(msg); } catch (e) { /* ignore */ } } });
+      }
+      renderRoom(rost, myName(), m.len, m.sport);
+    }
+  }
+  if (view) { if (mode !== 'menu') sounds(view); else { lastK = view.k; lastG = view.gl; } lastView = view; }
+  draw(lastView);
+  requestAnimationFrame(frame);
+};
+requestAnimationFrame(frame);
+document.addEventListener('visibilitychange', () => {
+  if (mode === 'host') $('#roomStatus').textContent = document.hidden ? 'The game pauses while this tab is hidden.' : 'Send your brothers the invite link. Keep this tab in front while you host: the game runs here.';
+});
+
+// ---------- start ----------
+const hint = $('#onlineHint');
+if (!netOK) {
+  hint.textContent = 'Online play could not load. Check your internet connection and reload. Keyboard play still works.';
+  $('#hostBtn').disabled = true; $('#joinBtn').disabled = true;
+} else {
+  hint.textContent = 'Host a game and send the invite link, or type the code you were given.';
+  $('#hostBtn').disabled = false; $('#joinBtn').disabled = false;
+  const fromLink = cleanCode(location.hash.slice(1));
+  if (fromLink.length === 4) {
+    $('#code').value = fromLink;
+    $('#menuStatus').textContent = '';
+    hint.textContent = `You've been invited to game ${fromLink}. Check your name, then press Join.`;
+    $('#joinBtn').focus();
+  }
+}
+})();
+</script>
+
+</body>
+</html>
