@@ -203,7 +203,7 @@ const css = getComputedStyle(document.documentElement);
 const tok = n => css.getPropertyValue(n).trim();
 
 // ---------- world ----------
-const W = 1000, H = 480, GROUND = 70, R = 56, BR = 12;
+const W = 1000, H = 480, GROUND = 70, R = 56, BR = 15;
 const GW = 72, GH = 135, BAR = 4;                                   // football goals
 const NET_X = W / 2, NET_W = 10, NET_H = 125;                        // volleyball net
 const STUMP_X = 140, STUMP_H = 74, CREASE_B = 235, CREASE_R = 470, BOWL_LINE = 560, BOWL_X = 790; // cricket
@@ -645,6 +645,56 @@ const drawCricket = down => {
   }
 };
 
+// each sport's ball, rolling as it moves
+const drawBall = (sp, bx, by) => {
+  const r = BR * k, TAU = Math.PI * 2;
+  ctx.save();
+  ctx.translate(X(bx), Y(by)); ctx.rotate(bx / BR);
+  ctx.beginPath(); ctx.arc(0, 0, r, 0, TAU);
+  if (sp === 'cricket') {
+    ctx.fillStyle = '#b8282a'; ctx.fill();
+    ctx.strokeStyle = 'rgba(255,246,230,0.9)'; ctx.lineWidth = Math.max(1, r * 0.1);
+    ctx.beginPath(); ctx.moveTo(-r * 0.97, -r * 0.08); ctx.lineTo(r * 0.97, -r * 0.08); ctx.moveTo(-r * 0.97, r * 0.08); ctx.lineTo(r * 0.97, r * 0.08); ctx.stroke();
+    ctx.lineWidth = Math.max(1, r * 0.07);
+    Array.from({ length: 7 }).forEach((_, i) => { const x = (i - 3) * r * 0.26; ctx.beginPath(); ctx.moveTo(x, -r * 0.2); ctx.lineTo(x, -r * 0.1); ctx.moveTo(x, r * 0.1); ctx.lineTo(x, r * 0.2); ctx.stroke(); });
+  } else if (sp === 'volley') {
+    ctx.save(); ctx.clip();
+    ['#f7f3e6', '#f2c230', '#2f63c8'].forEach((c, i) => {
+      ctx.fillStyle = c; ctx.beginPath(); ctx.moveTo(0, 0); ctx.arc(0, 0, r * 1.05, i * TAU / 3, (i + 1) * TAU / 3); ctx.closePath(); ctx.fill();
+    });
+    ctx.strokeStyle = 'rgba(20,24,40,0.55)'; ctx.lineWidth = Math.max(1, r * 0.08);
+    Array.from({ length: 3 }).forEach((_, i) => {
+      const a = i * TAU / 3;
+      ctx.beginPath(); ctx.moveTo(0, 0);
+      ctx.quadraticCurveTo(Math.cos(a + 0.6) * r * 0.75, Math.sin(a + 0.6) * r * 0.75, Math.cos(a) * r * 1.05, Math.sin(a) * r * 1.05);
+      ctx.stroke();
+    });
+    ctx.restore();
+  } else {
+    ctx.fillStyle = '#f7f7f2'; ctx.fill();
+    ctx.save(); ctx.clip();
+    const pent = (px, py, size, rot) => {
+      ctx.beginPath();
+      Array.from({ length: 5 }).forEach((_, i) => { const a = rot + i * TAU / 5; ctx.lineTo(px + Math.cos(a) * size, py + Math.sin(a) * size); });
+      ctx.closePath(); ctx.fill();
+    };
+    ctx.fillStyle = '#17171c'; ctx.strokeStyle = '#17171c'; ctx.lineWidth = Math.max(1, r * 0.07);
+    pent(0, 0, r * 0.34, -Math.PI / 2);
+    Array.from({ length: 5 }).forEach((_, i) => {
+      const a = -Math.PI / 2 + i * TAU / 5;
+      ctx.beginPath(); ctx.moveTo(Math.cos(a) * r * 0.34, Math.sin(a) * r * 0.34); ctx.lineTo(Math.cos(a) * r * 0.7, Math.sin(a) * r * 0.7); ctx.stroke();
+      pent(Math.cos(a + Math.PI / 5) * r * 0.95, Math.sin(a + Math.PI / 5) * r * 0.95, r * 0.3, a + Math.PI / 5 + Math.PI);
+    });
+    ctx.restore();
+  }
+  ctx.restore();
+  // fixed light from the floodlights, outline so it reads on any background
+  const g = ctx.createRadialGradient(X(bx) - r * 0.4, Y(by) - r * 0.45, r * 0.1, X(bx), Y(by), r);
+  g.addColorStop(0, 'rgba(255,255,255,0.35)'); g.addColorStop(0.6, 'rgba(255,255,255,0)'); g.addColorStop(1, 'rgba(0,0,0,0.28)');
+  ctx.fillStyle = g; ctx.beginPath(); ctx.arc(X(bx), Y(by), r, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'rgba(10,12,30,0.6)'; ctx.lineWidth = Math.max(1, r * 0.08); ctx.stroke();
+};
+
 const draw = v => {
   const cw = cv.width, ch = cv.height, sp = v.sp || 'football';
   const sky = ctx.createLinearGradient(0, 0, 0, Y(0));
@@ -702,10 +752,7 @@ const draw = v => {
     }
   });
 
-  ctx.fillStyle = sp === 'cricket' ? '#d8433a' : tok('--flood');
-  ctx.beginPath(); ctx.arc(X(bx), Y(by), BR * k, 0, Math.PI * 2); ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.7)';
-  ctx.beginPath(); ctx.arc(X(bx - 4), Y(by + 4), BR * 0.32 * k, 0, Math.PI * 2); ctx.fill();
+  drawBall(sp, bx, by);
 
   // scoreboard
   ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
