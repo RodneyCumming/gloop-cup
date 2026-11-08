@@ -203,7 +203,7 @@ const css = getComputedStyle(document.documentElement);
 const tok = n => css.getPropertyValue(n).trim();
 
 // ---------- world ----------
-const W = 1000, H = 480, GROUND = 70, R = 56, BR = 15;
+const W = 1000, H = 480, GROUND = 70, R = 56, BR = 20;
 const GW = 72, GH = 135, BAR = 4, ROOF = 30;                                   // football goals
 const NET_X = W / 2, NET_W = 10, NET_H = 125;                        // volleyball net
 const STUMP_X = 140, STUMP_H = 74, CREASE_B = 235, CREASE_R = 470, BOWL_LINE = 560, BOWL_X = 790; // cricket
@@ -582,6 +582,7 @@ const serialize = (m, t) => {
     s: m.slimes.filter(s => s.active !== false).map(s => [Math.round(s.x), Math.round(s.y), s.team, shade[s.team]++ % 3, s.name, Math.round(Math.min(s.hang / HANG, 1) * 10)]),
     b: [Math.round(m.ball.x), Math.round(m.ball.y)],
   };
+  if (m.sport === 'football' && m.pause > 0) v.hb = 1;
   if (ck) v.ck = [ck.inn, ck.bat, ck.balls, ck.per, ck.outs[0], ck.outs[1], ck.down ? 1 : 0];
   return v;
 };
@@ -741,7 +742,7 @@ const draw = v => {
   const [bx, by] = v.b;
   const sh = clamp(1 - by / H, 0.25, 1);
   ctx.fillStyle = `rgba(0,0,0,${0.35 * sh})`;
-  ctx.beginPath(); ctx.ellipse(X(bx), Y(0) + 4 * k, BR * k * 1.3 * sh, 4 * k * sh, 0, 0, Math.PI * 2); ctx.fill();
+  if (!v.hb) { ctx.beginPath(); ctx.ellipse(X(bx), Y(0) + 4 * k, BR * k * 1.3 * sh, 4 * k * sh, 0, 0, Math.PI * 2); ctx.fill(); }
 
   v.s.forEach(([x, y, team, shade, name, hang]) => {
     const col = TEAMS[team].c[shade] || TEAMS[team].c[0];
@@ -770,7 +771,7 @@ const draw = v => {
     }
   });
 
-  drawBall(sp, bx, by);
+  if (!v.hb) drawBall(sp, bx, by);
 
   // scoreboard
   ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
